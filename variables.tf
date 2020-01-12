@@ -208,6 +208,12 @@ variable "create_elasticache_subnet_route_table" {
   default     = false
 }
 
+variable "database_subnet_group_use_subnets" {
+  description = "Override subnets used for database subnet group with subnet name provided"
+  type        = string
+  default     = "database"
+}
+
 variable "create_database_subnet_group" {
   description = "Controls if database subnet group should be created"
   type        = bool

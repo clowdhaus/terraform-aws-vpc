@@ -333,8 +333,20 @@ resource "aws_subnet" "private" {
 ##################
 # Database subnet
 ##################
+
+locals {
+  database_subnets = {
+    private     = length(var.private_subnets) > 0 ? aws_subnet.private.*.id : []
+    public      = length(var.public_subnets) > 0 ? aws_subnet.public.*.id : []
+    database    = length(var.database_subnets) > 0 ? aws_subnet.database.*.id : []
+    elasticache = length(var.elasticache_subnets) > 0 ? aws_subnet.elasticache.*.id : []
+    redshift    = length(var.redshift_subnets) > 0 ? aws_subnet.redshift.*.id : []
+    intra       = length(var.intra_subnets) > 0 ? aws_subnet.intra.*.id : []
+  }
+}
+
 resource "aws_subnet" "database" {
-  count = var.create_vpc && length(var.database_subnets) > 0 ? length(var.database_subnets) : 0
+  count = var.create_vpc && length(var.database_subnets) > 0 && var.database_subnet_group_use_subnets == "database" ? length(var.database_subnets) : 0
 
   vpc_id                          = local.vpc_id
   cidr_block                      = var.database_subnets[count.index]
@@ -361,7 +373,7 @@ resource "aws_db_subnet_group" "database" {
 
   name        = lower(var.name)
   description = "Database subnet group for ${var.name}"
-  subnet_ids  = aws_subnet.database.*.id
+  subnet_ids  = local.database_subnets["${var.database_subnet_group_use_subnets}"]
 
   tags = merge(
     {
@@ -933,7 +945,7 @@ resource "aws_route_table_association" "private" {
 }
 
 resource "aws_route_table_association" "database" {
-  count = var.create_vpc && length(var.database_subnets) > 0 ? length(var.database_subnets) : 0
+  count = var.create_vpc && length(var.database_subnets) > 0 && var.database_subnet_group_use_subnets == "database" ? length(var.database_subnets) : 0
 
   subnet_id = element(aws_subnet.database.*.id, count.index)
   route_table_id = element(
